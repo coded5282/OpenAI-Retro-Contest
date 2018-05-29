@@ -12,48 +12,44 @@ import numpy as np
 import gym_remote.client as grc
 import gym_remote.exceptions as gre
 
-from retro_contest.local import make
+import tensorflow as tf
+
+from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
+#import baselines.ppo2.ppo2 as ppo2
+import ppo2_mod as ppo2
+import baselines.ppo2.policies as policies
+
+from sonic_util import make_env
+
+#from retro_contest.local import make
 
 EXPLOIT_BIAS = 0.40
 TOTAL_TIMESTEPS = int(1e6)
 
-# v2: move forward steps increased to 200
-# v3: move forward steps changed to 150
-# v4: exploit bias changed to 0.40 from 0.25 and v3
-# v5: v4 and jump_repeat to 8 from 4
-# v6: v5 and jump prob to 2/10 from 1/10
-# v7: minus v6 changes and added always spin attack if not jumping
+# v1: add ppo2.learn and always go left with just jump action
 
 def main():
-    """Run JERK on the attached environment."""
-#    env = grc.RemoteEnv('tmp/sock')
-    env = make(game='SonicTheHedgehog-Genesis', state='LabyrinthZone.Act1')
-#    env.render()
-    env = TrackedEnv(env)
-    new_ep = True
-    solutions = []
-    obs = env.reset()
-    while True:
-        if new_ep:
-            if (solutions and
-                    random.random() < EXPLOIT_BIAS + env.total_steps_ever / TOTAL_TIMESTEPS):
-                solutions = sorted(solutions, key=lambda x: np.mean(x[0]))
-                best_pair = solutions[-1]
-                new_rew = exploit(env, best_pair[1])
-                best_pair[0].append(new_rew)
-                print('replayed best with reward %f' % new_rew)
-                continue
-            else:
-                env.reset()
-                new_ep = False
-        rew, new_ep = move(env, 150) # increased to 200 from 100 for v2
-        if not new_ep and rew <= 0:
-            print('backtracking due to negative reward: %f' % rew)
-            _, new_ep = move(env, 70, left=True)
-        if new_ep:
-            solutions.append(([max(env.reward_history)], env.best_sequence()))
-        env.render()
-    env.close() # close environment 
+    """Run PPO until the environment throws an exception."""
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True # pylint: disable=E1101
+    with tf.Session(config=config) as sess:
+        # Take more timesteps than we need to be sure that
+        # we stop due to an exception.
+        ppo2.learn(policy=policies.CnnPolicy,
+                   env=DummyVecEnv([make_env]),
+                   nsteps=4096,
+#                   nsteps=1,
+                   nminibatches=8,
+#                   nminibatches=1,
+                   lam=0.95,
+                   gamma=0.99,
+                   noptepochs=3,
+#                   noptepochs=1,
+                   log_interval=1,
+                   ent_coef=0.01,
+                   lr=lambda _: 2e-4,
+                   cliprange=lambda _: 0.1,
+                   total_timesteps=int(1e7))
 
 def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     """
