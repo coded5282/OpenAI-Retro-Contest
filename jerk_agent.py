@@ -25,6 +25,7 @@ TOTAL_TIMESTEPS = int(1e6)
 # v7: minus v6 changes and added always spin attack if not jumping # spin attack not working
 # v8: fixed v7 to actually always spin attack if not jumping # spin attack not working
 # v9: added go right for exploit-waste and v5
+# v10: v9 and increased move right to 170 from 150
 
 
 def main():
@@ -35,7 +36,7 @@ def main():
     env = TrackedEnv(env)
     new_ep = True
     solutions = []
-    obs = env.reset()
+#    obs = env.reset()
     while True:
         if new_ep:
             if (solutions and
@@ -49,7 +50,7 @@ def main():
             else:
                 env.reset()
                 new_ep = False
-        rew, new_ep = move(env, 150) # increased to 200 from 100 for v2
+        rew, new_ep = move(env, 170) # increased to 200 from 100 for v2
         if not new_ep and rew <= 0:
             print('backtracking due to negative reward: %f' % rew)
             _, new_ep = move(env, 70, left=True)
@@ -92,7 +93,7 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
         total_rew += rew
 #        if steps_taken % 10 == 0:
 #            env.render()
-        env.render()
+#        env.render()
         steps_taken += 1
         if done:
             break

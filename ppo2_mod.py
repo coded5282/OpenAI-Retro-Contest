@@ -103,15 +103,15 @@ class Runner(AbstractEnvRunner):
             mb_values.append(values)
             mb_neglogpacs.append(neglogpacs)
             mb_dones.append(self.dones)
-            print("BEFORE LEFT ACTION!")
-            print(actions)
-            rest_of_actions = [0] * 11
-            actions = np.append(actions, rest_of_actions)
-            print("FULL ACTIONS BEFORE LEFT!")
-            print(actions)
-            actions[7] = True
-            print("AFTER LEFT ACTION!")
-            print(actions)
+#            print("BEFORE LEFT ACTION!")
+#            print(actions)
+#            rest_of_actions = [0] * 11
+#            actions = np.append(actions, rest_of_actions)
+#            print("FULL ACTIONS BEFORE LEFT!")
+#            print(actions)
+#            actions[7] = True
+#            print("AFTER LEFT ACTION!")
+#            print(actions)
             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
             for info in infos:
                 maybeepinfo = info.get('episode')
