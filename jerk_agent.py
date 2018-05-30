@@ -12,7 +12,7 @@ import numpy as np
 import gym_remote.client as grc
 import gym_remote.exceptions as gre
 
-from retro_contest.local import make
+#from retro_contest.local import make
 
 EXPLOIT_BIAS = 0.40
 TOTAL_TIMESTEPS = int(1e6)
@@ -23,16 +23,17 @@ TOTAL_TIMESTEPS = int(1e6)
 # v5: v4 and jump_repeat to 8 from 4
 # v6: v5 and jump prob to 2/10 from 1/10
 # v7: minus v6 changes and added always spin attack if not jumping
+# v8: fixed v7 to actually always spin attack if not jumping
 
 def main():
     """Run JERK on the attached environment."""
-#    env = grc.RemoteEnv('tmp/sock')
-    env = make(game='SonicTheHedgehog-Genesis', state='LabyrinthZone.Act1')
+    env = grc.RemoteEnv('tmp/sock')
+#    env = make(game='SonicTheHedgehog-Genesis', state='SpringYardZone.Act1')
 #    env.render()
     env = TrackedEnv(env)
     new_ep = True
     solutions = []
-    obs = env.reset()
+#    obs = env.reset()
     while True:
         if new_ep:
             if (solutions and
@@ -52,8 +53,8 @@ def main():
             _, new_ep = move(env, 70, left=True)
         if new_ep:
             solutions.append(([max(env.reward_history)], env.best_sequence()))
-        env.render()
-    env.close() # close environment 
+#        env.render()
+#    env.close() # close environment 
 
 def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     """
@@ -64,7 +65,7 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     done = False
     steps_taken = 0
     jumping_steps_left = 0
-    is_jumping = False
+#    in_speed = False
     while not done and steps_taken < num_steps:
         action = np.zeros((12,), dtype=np.bool)
         action[6] = left
@@ -72,17 +73,21 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
         if jumping_steps_left > 0:
             action[0] = True
             jumping_steps_left -= 1
-            is_jumping = True
+#            is_jumping = True
         else:
             if random.random() < jump_prob:
                 jumping_steps_left = jump_repeat - 1
                 action[0] = True
-                is_jumping = True
-        if not is_jumping: # if not jumping in this turn
+#                is_jumping = True
+        if action[0] == False: # if not jumping in this turn
             action[5] = True # then go down and do spin attack
             # maybe add prob of spin rather than always spin if not jumping?
         _, rew, done, _ = env.step(action)
+        if 
         total_rew += rew
+#        if steps_taken % 10 == 0:
+#            env.render()
+#        env.render()
         steps_taken += 1
         if done:
             break
@@ -104,6 +109,9 @@ def exploit(env, sequence):
         else:
             _, _, done, _ = env.step(sequence[idx])
         idx += 1
+#        if idx % 10 == 0:
+#            env.render()
+#        env.render()
     return env.total_reward
 
 class TrackedEnv(gym.Wrapper):
@@ -140,6 +148,10 @@ class TrackedEnv(gym.Wrapper):
         self.total_steps_ever += 1
         self.action_history.append(action.copy())
         obs, rew, done, info = self.env.step(action)
+#        print(info)
+#        print(action)
+#        if action[5] and action[6]:
+#            print("ATTACK@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         self.total_reward += rew
         self.reward_history.append(self.total_reward)
         return obs, rew, done, info

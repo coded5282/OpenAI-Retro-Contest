@@ -105,7 +105,11 @@ class Runner(AbstractEnvRunner):
             mb_dones.append(self.dones)
             print("BEFORE LEFT ACTION!")
             print(actions)
-            actions[6] = True
+            rest_of_actions = [0] * 11
+            actions = np.append(actions, rest_of_actions)
+            print("FULL ACTIONS BEFORE LEFT!")
+            print(actions)
+            actions[7] = True
             print("AFTER LEFT ACTION!")
             print(actions)
             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
