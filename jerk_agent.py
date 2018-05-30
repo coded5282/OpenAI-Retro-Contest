@@ -26,6 +26,7 @@ TOTAL_TIMESTEPS = int(1e6)
 # v8: fixed v7 to actually always spin attack if not jumping # spin attack not working
 # v9: added go right for exploit-waste and v5
 # v10: v9 and increased move right to 170 from 150
+# v11: v9 and increased jump_repeat to 10 from 8
 
 
 def main():
@@ -59,7 +60,7 @@ def main():
 #        env.render()
     env.close() # close environment 
 
-def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
+def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=10):
     """
     Move right or left for a certain number of steps,
     jumping periodically.
