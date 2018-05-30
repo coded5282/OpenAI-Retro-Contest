@@ -22,8 +22,10 @@ TOTAL_TIMESTEPS = int(1e6)
 # v4: exploit bias changed to 0.40 from 0.25 and v3
 # v5: v4 and jump_repeat to 8 from 4
 # v6: v5 and jump prob to 2/10 from 1/10
-# v7: minus v6 changes and added always spin attack if not jumping
-# v8: fixed v7 to actually always spin attack if not jumping
+# v7: minus v6 changes and added always spin attack if not jumping # spin attack not working
+# v8: fixed v7 to actually always spin attack if not jumping # spin attack not working
+# v9: added go right for exploit-waste and v5
+
 
 def main():
     """Run JERK on the attached environment."""
@@ -33,7 +35,7 @@ def main():
     env = TrackedEnv(env)
     new_ep = True
     solutions = []
-#    obs = env.reset()
+    obs = env.reset()
     while True:
         if new_ep:
             if (solutions and
@@ -54,7 +56,7 @@ def main():
         if new_ep:
             solutions.append(([max(env.reward_history)], env.best_sequence()))
 #        env.render()
-#    env.close() # close environment 
+    env.close() # close environment 
 
 def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     """
@@ -79,15 +81,18 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
                 jumping_steps_left = jump_repeat - 1
                 action[0] = True
 #                is_jumping = True
-        if action[0] == False: # if not jumping in this turn
-            action[5] = True # then go down and do spin attack
+#        if (action[0] == False) and in_speed: # if not jumping in this turn
+#            action[5] = True # then go down and do spin attack
             # maybe add prob of spin rather than always spin if not jumping?
         _, rew, done, _ = env.step(action)
-        if 
+#        if ((sum(action) == 1) and (action[7] or action[6])) == True:
+#            in_speed = True
+#        else:
+#            in_speed = False
         total_rew += rew
 #        if steps_taken % 10 == 0:
 #            env.render()
-#        env.render()
+        env.render()
         steps_taken += 1
         if done:
             break
@@ -104,8 +109,10 @@ def exploit(env, sequence):
     idx = 0
     while not done:
         if idx >= len(sequence):
+            action = np.zeros((12,), dtype=np.bool)
+            action[7] = True # go right
             print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-            _, _, done, _ = env.step(np.zeros((12,), dtype='bool'))
+            _, _, done, _ = env.step(action)
         else:
             _, _, done, _ = env.step(sequence[idx])
         idx += 1
@@ -150,8 +157,6 @@ class TrackedEnv(gym.Wrapper):
         obs, rew, done, info = self.env.step(action)
 #        print(info)
 #        print(action)
-#        if action[5] and action[6]:
-#            print("ATTACK@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         self.total_reward += rew
         self.reward_history.append(self.total_reward)
         return obs, rew, done, info
