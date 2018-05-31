@@ -16,6 +16,7 @@ def make_env(stack=True, scale_rew=True):
     env = grc.RemoteEnv('tmp/sock')
 #    env = make(game='SonicTheHedgehog-Genesis', state='LabyrinthZone.Act1')
     env = SonicDiscretizer(env)
+    env = JerkEnv(env)
     if scale_rew:
         env = RewardScaler(env)
     env = WarpFrame(env)
@@ -33,7 +34,7 @@ class SonicDiscretizer(gym.ActionWrapper):
         buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
 #        actions = [['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'],
 #                   ['DOWN', 'B'], ['B']]
-        actions = [['B']]
+        actions = [['RIGHT', 'B'], ['RIGHT'], ['LEFT', 'B'], ['LEFT']]
         self._actions = []
         for action in actions:
             arr = np.array([False] * 12)
@@ -64,6 +65,30 @@ class AllowBacktracking(gym.Wrapper):
     """
     def __init__(self, env):
         super(AllowBacktracking, self).__init__(env)
+        self._cur_x = 0
+        self._max_x = 0
+
+    def reset(self, **kwargs): # pylint: disable=E0202
+        self._cur_x = 0
+        self._max_x = 0
+        return self.env.reset(**kwargs)
+
+    def step(self, action): # pylint: disable=E0202
+        obs, rew, done, info = self.env.step(action)
+        self._cur_x += rew
+        rew = max(0, self._cur_x - self._max_x)
+        self._max_x = max(self._max_x, self._cur_x)
+        return obs, rew, done, info
+    
+class JerkEnv(gym.Wrapper):
+    """
+    Use deltas in max(X) as the reward, rather than deltas
+    in X. This way, agents are not discouraged too heavily
+    from exploring backwards if there is no way to advance
+    head-on in the level.
+    """
+    def __init__(self, env):
+        super(JerkEnv, self).__init__(env)
         self._cur_x = 0
         self._max_x = 0
 
