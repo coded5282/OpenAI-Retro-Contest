@@ -38,7 +38,7 @@ def main():
     env = TrackedEnv(env)
     new_ep = True
     solutions = []
-#    obs = env.reset()
+    obs = env.reset()
     while True:
         if new_ep:
             if (solutions and
