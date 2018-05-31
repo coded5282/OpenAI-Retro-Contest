@@ -104,7 +104,7 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
         total_rew += rew
 #        if steps_taken % 10 == 0:
 #            env.render()
-        env.render()
+#        env.render()
         steps_taken += 1
         if done:
             break
