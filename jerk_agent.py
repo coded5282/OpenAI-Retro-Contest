@@ -25,6 +25,9 @@ TOTAL_TIMESTEPS = int(1e6)
 # v7: minus v6 changes and added always spin attack if not jumping # spin attack not working
 # v8: fixed v7 to actually always spin attack if not jumping # spin attack not working
 # v9: added go right for exploit-waste and v5
+# v10: v9 and move right to 175 from 150
+# v11: v9 and jump rep. to 10 from 8
+# v12: v9 and roll if has momentum 7
 
 
 def main():
@@ -67,7 +70,8 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     done = False
     steps_taken = 0
     jumping_steps_left = 0
-#    in_speed = False
+    has_momentum = 0
+    last_action = 0
     while not done and steps_taken < num_steps:
         action = np.zeros((12,), dtype=np.bool)
         action[6] = left
@@ -81,12 +85,19 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
                 jumping_steps_left = jump_repeat - 1
                 action[0] = True
 #                is_jumping = True
-#        if (action[0] == False) and in_speed: # if not jumping in this turn
-#            action[5] = True # then go down and do spin attack
-            # maybe add prob of spin rather than always spin if not jumping?
+        if has_momentum >= 7: # in momentum (has some good speed)
+            action = np.zeros((12,), dtype=np.bool)
+            action[5] = True # roll
+            
         _, rew, done, _ = env.step(action)
 #        if ((sum(action) == 1) and (action[7] or action[6])) == True:
-#            in_speed = True
+#            has_momentum++
+        if (sum(action) == 1):
+            if action[last_action]:
+                has_momentum += 1
+            else:
+                last_action = np.where(action)[0][0] # get index of action that is true
+                has_momentum = 0
 #        else:
 #            in_speed = False
         total_rew += rew
