@@ -28,6 +28,7 @@ TOTAL_TIMESTEPS = int(1e6)
 # v10: v9 and move right to 175 from 150
 # v11: v9 and jump rep. to 10 from 8
 # v12: v9 and roll if has momentum 7
+# v13: v12 and exploit-waste as move()
 
 
 def main():
@@ -120,16 +121,19 @@ def exploit(env, sequence):
     idx = 0
     while not done:
         if idx >= len(sequence):
-            action = np.zeros((12,), dtype=np.bool)
-            action[7] = True # go right
-            print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-            _, _, done, _ = env.step(action)
+            rew, done = move(env, 150) #
+            if done:
+                break
+            if rew <= 0:
+                print('backtracking due to negative reward: %f' % rew)
+                _, done = move(env, 70, left=True)
+#            action = np.zeros((12,), dtype=np.bool)
+#            action[7] = True # go right
+#            print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+#            _, rew, done, _ = env.step(action)
         else:
             _, _, done, _ = env.step(sequence[idx])
         idx += 1
-#        if idx % 10 == 0:
-#            env.render()
-#        env.render()
     return env.total_reward
 
 class TrackedEnv(gym.Wrapper):
