@@ -39,7 +39,7 @@ def main():
     env = TrackedEnv(env)
     new_ep = True
     solutions = []
-    obs = env.reset()
+#    obs = env.reset()
     while True:
         if new_ep:
             if (solutions and
@@ -60,7 +60,7 @@ def main():
         if new_ep:
             solutions.append(([max(env.reward_history)], env.best_sequence()))
 #        env.render()
-    env.close() # close environment 
+#    env.close() # close environment 
 
 def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     """
