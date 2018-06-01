@@ -17,8 +17,8 @@ import gym_remote.exceptions as gre
 EXPLOIT_BIAS = 0.40
 TOTAL_TIMESTEPS = int(1e6)
 
-ROLL_PROB = 0.3
-MOMENTUM_REQUIRED = 4
+ROLL_PROB = 1
+MOMENTUM_REQUIRED = 10
 
 # v2: move forward steps increased to 200
 # v3: move forward steps changed to 150
