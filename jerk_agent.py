@@ -17,6 +17,9 @@ import gym_remote.exceptions as gre
 EXPLOIT_BIAS = 0.40
 TOTAL_TIMESTEPS = int(1e6)
 
+ROLL_PROB = 0.3
+MOMENTUM_REQUIRED = 4
+
 # v2: move forward steps increased to 200
 # v3: move forward steps changed to 150
 # v4: exploit bias changed to 0.40 from 0.25 and v3
@@ -30,6 +33,7 @@ TOTAL_TIMESTEPS = int(1e6)
 # v12: v9 and roll if has momentum 7
 # v13: v12 and exploit-waste as move()
 # v14: v9 and exploit-waste as move()
+# v15: v14 and momentum left,right (4, 7, 10) with roll prob. (0.3, 0.5, 0.7, 1)
 
 
 def main():
@@ -62,8 +66,59 @@ def main():
             solutions.append(([max(env.reward_history)], env.best_sequence()))
 #        env.render()
 #    env.close() # close environment 
-
+            
 def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
+    """
+    Move right or left for a certain number of steps,
+    jumping periodically.
+    """
+    total_rew = 0.0
+    done = False
+    steps_taken = 0
+    jumping_steps_left = 0
+    has_momentum = 0
+    last_action = 0
+    while not done and steps_taken < num_steps:
+        action = np.zeros((12,), dtype=np.bool)
+        action[6] = left
+        action[7] = not left
+        if jumping_steps_left > 0:
+            action[0] = True
+            jumping_steps_left -= 1
+#            is_jumping = True
+        else:
+            if random.random() < jump_prob:
+                jumping_steps_left = jump_repeat - 1
+                action[0] = True
+#                is_jumping = True
+                
+        # Roll if satisfies momentum and prob. required
+        if (has_momentum >= MOMENTUM_REQUIRED) and (random.random() < ROLL_PROB): # in momentum (has some good speed)
+            action = np.zeros((12,), dtype=np.bool)
+            action[5] = True # roll
+            
+        _, rew, done, _ = env.step(action)
+        
+        if (sum(action) == 1): # only gain momentum if going left or going right
+            if last_action != 0 and action[last_action]:
+                has_momentum += 1
+            else:
+                if action[6]:
+                    last_action = 6
+                elif action[7]:
+                    last_action = 7
+                else:
+                    last_action = 0
+                has_momentum = 0
+
+        total_rew += rew
+
+        steps_taken += 1
+        if done:
+            break
+    return total_rew, done
+
+def move_exp(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     """
     Move right or left for a certain number of steps,
     jumping periodically.
@@ -122,12 +177,12 @@ def exploit(env, sequence):
     idx = 0
     while not done:
         if idx >= len(sequence):
-            rew, done = move(env, 150) #
+            rew, done = move_exp(env, 150) #
             if done:
                 break
             if rew <= 0:
                 print('backtracking due to negative reward: %f' % rew)
-                _, done = move(env, 70, left=True)
+                _, done = move_exp(env, 70, left=True)
 #            action = np.zeros((12,), dtype=np.bool)
 #            action[7] = True # go right
 #            print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
