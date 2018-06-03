@@ -34,6 +34,7 @@ MOMENTUM_REQUIRED = 10
 # v13: v12 and exploit-waste as move()
 # v14: v9 and exploit-waste as move()
 # v15: v14 and momentum left,right (4, 7, 10) with roll prob. (0.3, 0.5, 0.7, 1)
+# v16: v14 and waste-exploit only go RIGHT
 
 
 def main():
@@ -58,10 +59,10 @@ def main():
             else:
                 env.reset()
                 new_ep = False
-        rew, new_ep = move(env, 150) # increased to 200 from 100 for v2
+        rew, new_ep = move_exp(env, 150) # increased to 200 from 100 for v2
         if not new_ep and rew <= 0:
             print('backtracking due to negative reward: %f' % rew)
-            _, new_ep = move(env, 70, left=True)
+            _, new_ep = move_exp(env, 70, left=True)
         if new_ep:
             solutions.append(([max(env.reward_history)], env.best_sequence()))
 #        env.render()
@@ -180,9 +181,9 @@ def exploit(env, sequence):
             rew, done = move_exp(env, 150) #
             if done:
                 break
-            if rew <= 0:
-                print('backtracking due to negative reward: %f' % rew)
-                _, done = move_exp(env, 70, left=True)
+#            if rew <= 0:
+#                print('backtracking due to negative reward: %f' % rew)
+#                _, done = move_exp(env, 70, left=True)
 #            action = np.zeros((12,), dtype=np.bool)
 #            action[7] = True # go right
 #            print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
