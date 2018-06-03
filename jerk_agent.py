@@ -13,12 +13,13 @@ import gym_remote.client as grc
 import gym_remote.exceptions as gre
 
 #from retro_contest.local import make
+#import time
 
 EXPLOIT_BIAS = 0.40
 TOTAL_TIMESTEPS = int(1e6)
 
 ROLL_PROB = 1
-MOMENTUM_REQUIRED = 10
+MOMENTUM_REQUIRED = 7
 
 # v2: move forward steps increased to 200
 # v3: move forward steps changed to 150
@@ -35,6 +36,7 @@ MOMENTUM_REQUIRED = 10
 # v14: v9 and exploit-waste as move()
 # v15: v14 and momentum left,right (4, 7, 10) with roll prob. (0.3, 0.5, 0.7, 1)
 # v16: v14 and waste-exploit only go RIGHT
+# v17: v14 and momentum roll with jumping next if scheduled
 
 
 def main():
@@ -59,10 +61,11 @@ def main():
             else:
                 env.reset()
                 new_ep = False
-        rew, new_ep = move_exp(env, 150) # increased to 200 from 100 for v2
+        rew, new_ep = move(env, 150) # increased to 200 from 100 for v2
+        print("REWARD FOR TOTAL RIGHT MOVE IS: ", rew)
         if not new_ep and rew <= 0:
             print('backtracking due to negative reward: %f' % rew)
-            _, new_ep = move_exp(env, 70, left=True)
+            _, new_ep = move(env, 70, left=True)
         if new_ep:
             solutions.append(([max(env.reward_history)], env.best_sequence()))
 #        env.render()
@@ -79,24 +82,34 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     jumping_steps_left = 0
     has_momentum = 0
     last_action = 0
+    is_jumping = False
+    next_jump = False
     while not done and steps_taken < num_steps:
+        is_jumping = False
         action = np.zeros((12,), dtype=np.bool)
         action[6] = left
         action[7] = not left
-        if jumping_steps_left > 0:
+        if next_jump:
+            action[0] = True
+            next_jump = False
+        elif jumping_steps_left > 0:
             action[0] = True
             jumping_steps_left -= 1
-#            is_jumping = True
+            is_jumping = True
         else:
             if random.random() < jump_prob:
                 jumping_steps_left = jump_repeat - 1
                 action[0] = True
-#                is_jumping = True
+                is_jumping = True
                 
         # Roll if satisfies momentum and prob. required
         if (has_momentum >= MOMENTUM_REQUIRED) and (random.random() < ROLL_PROB): # in momentum (has some good speed)
             action = np.zeros((12,), dtype=np.bool)
+            if is_jumping:
+                next_jump = True
+#                action[0] = True
             action[5] = True # roll
+#            last_action = 0
             
         _, rew, done, _ = env.step(action)
         
@@ -178,12 +191,12 @@ def exploit(env, sequence):
     idx = 0
     while not done:
         if idx >= len(sequence):
-            rew, done = move_exp(env, 150) #
+            rew, done = move(env, 150) #
             if done:
                 break
-#            if rew <= 0:
-#                print('backtracking due to negative reward: %f' % rew)
-#                _, done = move_exp(env, 70, left=True)
+            if rew <= 0:
+                print('backtracking due to negative reward: %f' % rew)
+                _, done = move(env, 70, left=True)
 #            action = np.zeros((12,), dtype=np.bool)
 #            action[7] = True # go right
 #            print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
@@ -227,6 +240,8 @@ class TrackedEnv(gym.Wrapper):
         self.total_steps_ever += 1
         self.action_history.append(action.copy())
         obs, rew, done, info = self.env.step(action)
+#        self.env.render()
+#        time.sleep(.1)
 #        print(info)
 #        print(action)
         self.total_reward += rew
