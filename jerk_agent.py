@@ -39,6 +39,7 @@ MOMENTUM_REQUIRED = 7
 # v17: v14 and momentum roll with jumping next if scheduled
 # v18: v14 and left dir. reward set to 50
 # v19: v14 and logic for manually checking for zero-reward
+# v20: v19 and logic for cancelling future right jumps if rew < 0
 
 
 def main():
@@ -101,6 +102,9 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
                 is_jumping = True
             
         _, rew, done, _ = env.step(action)
+        
+        if is_jumping and rew <= 0 and left == False: # if jumping actually pushed further back, then don't jump
+            jumping_steps_left = 0
         
         if rew == 0: # if didn't make any progress with this step (maybe hitting an obstacle)
             total_steps_zero += 1
