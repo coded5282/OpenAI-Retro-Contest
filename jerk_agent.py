@@ -38,6 +38,7 @@ MOMENTUM_REQUIRED = 7
 # v16: v14 and waste-exploit only go RIGHT
 # v17: v14 and momentum roll with jumping next if scheduled
 # v18: v14 and left dir. reward set to 50
+# v19: v14 and logic for manually checking for zero-reward
 
 
 def main():
@@ -64,7 +65,7 @@ def main():
                 new_ep = False
         rew, new_ep = move(env, 150) # increased to 200 from 100 for v2
         print("REWARD FOR TOTAL RIGHT MOVE IS: ", rew)
-        if not new_ep and rew <= 50:
+        if not new_ep and rew <= 0:
             print('backtracking due to negative reward: %f' % rew)
             _, new_ep = move(env, 70, left=True)
         if new_ep:
@@ -81,41 +82,41 @@ def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     done = False
     steps_taken = 0
     jumping_steps_left = 0
-#    has_momentum = 0
-    last_action = 0
+    total_steps_zero = 0 # records total count of steps with 0 reward
+    total_jumps_zero = 0 # records total count of jumps with 0 reward
+    is_jumping = False # is jumping this step
     while not done and steps_taken < num_steps:
+        is_jumping = False
         action = np.zeros((12,), dtype=np.bool)
         action[6] = left
         action[7] = not left
         if jumping_steps_left > 0:
             action[0] = True
             jumping_steps_left -= 1
-#            is_jumping = True
+            is_jumping = True
         else:
             if random.random() < jump_prob:
                 jumping_steps_left = jump_repeat - 1
                 action[0] = True
-#                is_jumping = True
-#        if has_momentum >= 7: # in momentum (has some good speed)
-#            action = np.zeros((12,), dtype=np.bool)
-#            action[5] = True # roll
+                is_jumping = True
             
         _, rew, done, _ = env.step(action)
-#        if ((sum(action) == 1) and (action[7] or action[6])) == True:
-#            has_momentum++
-#        if (sum(action) == 1):
-#            if action[last_action]:
-#                has_momentum += 1
-#            else:
-#                last_action = np.where(action)[0][0] # get index of action that is true
-#                has_momentum = 0
-#        else:
-#            in_speed = False
+        
+        if rew == 0: # if didn't make any progress with this step (maybe hitting an obstacle)
+            total_steps_zero += 1
+            if is_jumping: # did it try jumping?
+                total_jumps_zero += 1
+        else: # if did make some progress, then conclude to be not stuck
+            total_steps_zero = 0
+            total_jumps_zero = 0
+
         total_rew += rew
-#        if steps_taken % 10 == 0:
-#            env.render()
-#        env.render()
+
         steps_taken += 1
+        
+        if total_steps_zero >= 20 and total_jumps_zero >= 8: # if tried this many times and still 0 rew, then prob stuck
+            break
+        
         if done:
             break
     return total_rew, done
@@ -137,10 +138,6 @@ def exploit(env, sequence):
             if rew <= 0:
                 print('backtracking due to negative reward: %f' % rew)
                 _, done = move(env, 70, left=True)
-#            action = np.zeros((12,), dtype=np.bool)
-#            action[7] = True # go right
-#            print('WASTED A MOVE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-#            _, rew, done, _ = env.step(action)
         else:
             _, _, done, _ = env.step(sequence[idx])
         idx += 1
