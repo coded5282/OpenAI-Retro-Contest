@@ -37,6 +37,7 @@ MOMENTUM_REQUIRED = 7
 # v15: v14 and momentum left,right (4, 7, 10) with roll prob. (0.3, 0.5, 0.7, 1)
 # v16: v14 and waste-exploit only go RIGHT
 # v17: v14 and momentum roll with jumping next if scheduled
+# v18: v14 and left dir. reward set to 50
 
 
 def main():
@@ -63,76 +64,15 @@ def main():
                 new_ep = False
         rew, new_ep = move(env, 150) # increased to 200 from 100 for v2
         print("REWARD FOR TOTAL RIGHT MOVE IS: ", rew)
-        if not new_ep and rew <= 0:
+        if not new_ep and rew <= 50:
             print('backtracking due to negative reward: %f' % rew)
             _, new_ep = move(env, 70, left=True)
         if new_ep:
             solutions.append(([max(env.reward_history)], env.best_sequence()))
 #        env.render()
 #    env.close() # close environment 
-            
+
 def move(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
-    """
-    Move right or left for a certain number of steps,
-    jumping periodically.
-    """
-    total_rew = 0.0
-    done = False
-    steps_taken = 0
-    jumping_steps_left = 0
-    has_momentum = 0
-    last_action = 0
-    is_jumping = False
-    next_jump = False
-    while not done and steps_taken < num_steps:
-        is_jumping = False
-        action = np.zeros((12,), dtype=np.bool)
-        action[6] = left
-        action[7] = not left
-        if next_jump:
-            action[0] = True
-            next_jump = False
-        elif jumping_steps_left > 0:
-            action[0] = True
-            jumping_steps_left -= 1
-            is_jumping = True
-        else:
-            if random.random() < jump_prob:
-                jumping_steps_left = jump_repeat - 1
-                action[0] = True
-                is_jumping = True
-                
-        # Roll if satisfies momentum and prob. required
-        if (has_momentum >= MOMENTUM_REQUIRED) and (random.random() < ROLL_PROB): # in momentum (has some good speed)
-            action = np.zeros((12,), dtype=np.bool)
-            if is_jumping:
-                next_jump = True
-#                action[0] = True
-            action[5] = True # roll
-#            last_action = 0
-            
-        _, rew, done, _ = env.step(action)
-        
-        if (sum(action) == 1): # only gain momentum if going left or going right
-            if last_action != 0 and action[last_action]:
-                has_momentum += 1
-            else:
-                if action[6]:
-                    last_action = 6
-                elif action[7]:
-                    last_action = 7
-                else:
-                    last_action = 0
-                has_momentum = 0
-
-        total_rew += rew
-
-        steps_taken += 1
-        if done:
-            break
-    return total_rew, done
-
-def move_exp(env, num_steps, left=False, jump_prob=1.0 / 10.0, jump_repeat=8):
     """
     Move right or left for a certain number of steps,
     jumping periodically.
